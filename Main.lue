@@ -1,0 +1,260 @@
+--[[  
+===========================================
+ SISTEMA DE TESTE INTERNO (AIMBOT + ESP PREMIUM)
+ Painel móvel + ESP 3D Avançado + HP Bar + Aimbot + FOV
+ 100% permitido dentro do seu próprio jogo.
+===========================================
+]]--
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- CONFIGURAÇÕES GLOBAIS
+_G.ESPAtivo = false
+_G.AimbotAtivo = false
+_G.FOV = 200
+_G.Tracers = {}
+
+-- Carrega Drawing Library
+local Drawing = Drawing or loadstring(game:HttpGet("https://raw.githubusercontent.com/RobloxAvatar/Drawing-Library/main/Drawing.lua"))()
+
+-------------------------------------------------------
+-- GUI / PAINEL DE CONTROLE
+-------------------------------------------------------
+local screen = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+screen.ResetOnSpawn = false
+
+local painel = Instance.new("Frame", screen)
+painel.Size = UDim2.new(0, 250, 0, 210)
+painel.Position = UDim2.new(0.05, 0, 0.15, 0)
+painel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+painel.Active = true
+painel.Draggable = true
+
+local title = Instance.new("TextLabel", painel)
+title.Size = UDim2.new(1, 0, 0, 32)
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+title.Text = "Painel de Teste PREMIUM"
+title.TextColor3 = Color3.new(1,1,1)
+title.TextScaled = true
+
+local espButton = Instance.new("TextButton", painel)
+espButton.Size = UDim2.new(1, -20, 0, 40)
+espButton.Position = UDim2.new(0, 10, 0, 45)
+espButton.Text = "ESP: OFF"
+espButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+espButton.TextColor3 = Color3.new(1,1,1)
+
+local aimbotButton = Instance.new("TextButton", painel)
+aimbotButton.Size = UDim2.new(1, -20, 0, 40)
+aimbotButton.Position = UDim2.new(0, 10, 0, 90)
+aimbotButton.Text = "Aimbot: OFF"
+aimbotButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+aimbotButton.TextColor3 = Color3.new(1,1,1)
+
+local fovSlider = Instance.new("TextButton", painel)
+fovSlider.Size = UDim2.new(1, -20, 0, 40)
+fovSlider.Position = UDim2.new(0, 10, 0, 140)
+fovSlider.Text = "FOV: " .. _G.FOV
+fovSlider.BackgroundColor3 = Color3.fromRGB(45,45,45)
+fovSlider.TextColor3 = Color3.new(1,1,1)
+
+espButton.MouseButton1Click:Connect(function()
+\t_G.ESPAtivo = not _G.ESPAtivo
+\tespButton.Text = "ESP: " .. (_G.ESPAtivo and "ON" or "OFF")
+end)
+
+aimbotButton.MouseButton1Click:Connect(function()
+\t_G.AimbotAtivo = not _G.AimbotAtivo
+\taimbotButton.Text = "Aimbot: " .. (_G.AimbotAtivo and "ON" or "OFF")
+end)
+
+fovSlider.MouseButton1Click:Connect(function()
+\t_G.FOV = _G.FOV + 50
+\tif _G.FOV > 500 then _G.FOV = 50 end
+\tfovSlider.Text = "FOV: " .. _G.FOV
+end)
+
+-------------------------------------------------------
+-- ESP 3D PREMIUM + BARRA DE VIDA
+-------------------------------------------------------
+local function criarHPBar(char)
+\tif char:FindFirstChild("HPBillboard") then return end
+
+\tlocal bill = Instance.new("BillboardGui")
+\tbill.Name = "HPBillboard"
+\tbill.Size = UDim2.new(4,0,1,0)
+\tbill.StudsOffset = Vector3.new(0, 4, 0)
+\tbill.AlwaysOnTop = true
+\tbill.Parent = char:WaitForChild("HumanoidRootPart")
+
+\tlocal barBG = Instance.new("Frame", bill)
+\tbarBG.Size = UDim2.new(1,0,0.2,0)
+\tbarBG.Position = UDim2.new(0,0,0.8,0)
+\tbarBG.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+\tlocal bar = Instance.new("Frame", barBG)
+\tbar.Name = "HP"
+\tbar.Size = UDim2.new(1,0,1,0)
+\tbar.BackgroundColor3 = Color3.fromRGB(255,50,50)
+
+\tlocal hum = char:WaitForChild("Humanoid")
+\thum.HealthChanged:Connect(function(hp)
+\t\tlocal healthPercent = hp / hum.MaxHealth
+\t\tbar.Size = UDim2.new(healthPercent, 0, 1, 0)
+\t\tbar.BackgroundColor3 = Color3.fromRGB(
+\t\t\t255 * (1 - healthPercent),
+\t\t\t255 * healthPercent,
+\t\t\t0
+\t\t)
+\tend)
+end
+
+local function criarESP(char)
+\tif char:FindFirstChild("AdvancedESP") then return end
+\t
+\t-- Highlight premium
+\tlocal h = Instance.new("Highlight")
+\th.Name = "AdvancedESP"
+\th.FillColor = Color3.fromRGB(0, 255, 100)
+\th.FillTransparency = 0.6
+\th.OutlineColor = Color3.fromRGB(255, 255, 255)
+\th.OutlineTransparency = 0
+\th.Parent = char
+\t
+\t-- Name tag premium
+\tlocal bill = Instance.new("BillboardGui")
+\tbill.Name = "NameTag"
+\tbill.Size = UDim2.new(0, 220, 0, 60)
+\tbill.StudsOffset = Vector3.new(0, 4, 0)
+\tbill.AlwaysOnTop = true
+\tbill.Parent = char:WaitForChild("Head")
+\t
+\tlocal nameLabel = Instance.new("TextLabel", bill)
+\tnameLabel.Size = UDim2.new(1, 0, 0.6, 0)
+\tnameLabel.BackgroundTransparency = 1
+\tnameLabel.Text = ""
+\tnameLabel.TextColor3 = Color3.new(1,1,1)
+\tnameLabel.TextStrokeTransparency = 0
+\tnameLabel.TextStrokeColor3 = Color3.new(0,0,0)
+\tnameLabel.TextScaled = true
+\tnameLabel.Font = Enum.Font.GothamBold
+\t
+\tlocal distLabel = Instance.new("TextLabel", bill)
+\tdistLabel.Size = UDim2.new(1, 0, 0.4, 0)
+\tdistLabel.Position = UDim2.new(0, 0, 0.6, 0)
+\tdistLabel.BackgroundTransparency = 1
+\tdistLabel.Text = ""
+\tdistLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+\tdistLabel.TextStrokeTransparency = 0
+\tdistLabel.TextStrokeColor3 = Color3.new(0,0,0)
+\tdistLabel.TextScaled = true
+\tdistLabel.Font = Enum.Font.Gotham
+end
+
+local function updateESP(plr)
+\tif not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+\tlocal char = plr.Character
+\tlocal root = char.HumanoidRootPart
+\t
+\t-- Update nome e distância
+\tif char.Head:FindFirstChild("NameTag") then
+\t\tlocal nameLabel = char.Head.NameTag.TextLabel
+\t\tlocal distLabel = char.Head.NameTag:FindChildren("TextLabel")[2]
+\t\tlocal dist = (root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+\t\tnameLabel.Text = plr.Name
+\t\tdistLabel.Text = math.floor(dist) .. "m"
+\tend
+\t
+\t-- Update tracer
+\tlocal tracer = _G.Tracers[plr]
+\tif tracer then
+\t\tlocal screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
+\t\tif onScreen and _G.ESPAtivo then
+\t\t\ttracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+\t\t\ttracer.To = Vector2.new(screenPos.X, screenPos.Y)
+\t\t\ttracer.Visible = true
+\t\telse
+\t\t\ttracer.Visible = false
+\t\tend
+\tend
+end
+
+-------------------------------------------------------
+-- MAIN ESP LOOP PREMIUM
+-------------------------------------------------------
+task.spawn(function()
+\twhile true do
+\t\ttask.wait(0.1)
+
+\t\tfor _, plr in pairs(Players:GetPlayers()) do
+\t\t\tif plr ~= LocalPlayer and plr.Character then
+\t\t\t\tif _G.ESPAtivo then
+\t\t\t\t\tcriarESP(plr.Character)
+\t\t\t\t\tcriarHPBar(plr.Character)
+\t\t\t\t\t
+\t\t\t\t\t-- Cria tracer se não existir
+\t\t\t\t\tif not _G.Tracers[plr] then
+\t\t\t\t\t\tlocal tracer = Drawing.new("Line")
+\t\t\t\t\t\ttracer.Color = Color3.fromRGB(255, 0, 255)
+\t\t\t\t\t\ttracer.Thickness = 2
+\t\t\t\t\t\ttracer.Transparency = 0.8
+\t\t\t\t\t\t_G.Tracers[plr] = tracer
+\t\t\t\t\tend
+\t\t\t\t\tupdateESP(plr)
+\t\t\t\t\t
+\t\t\t\telse
+\t\t\t\t\t-- Limpeza completa
+\t\t\t\t\tif plr.Character:FindFirstChild("AdvancedESP") then
+\t\t\t\t\t\tplr.Character.AdvancedESP:Destroy()
+\t\t\t\t\tend
+\t\t\t\t\tif plr.Character.Head:FindFirstChild("NameTag") then
+\t\t\t\t\t\tplr.Character.Head.NameTag:Destroy()
+\t\t\t\t\tend
+\t\t\t\t\tif plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart:FindFirstChild("HPBillboard") then
+\t\t\t\t\t\tplr.Character.HumanoidRootPart.HPBillboard:Destroy()
+\t\t\t\t\tend
+\t\t\t\t\tif _G.Tracers[plr] then
+\t\t\t\t\t\t_G.Tracers[plr]:Remove()
+\t\t\t\t\t\t_G.Tracers[plr] = nil
+\t\t\t\t\tend
+\t\t\t\tend
+\t\t\tend
+\t\tend
+\tend
+end)
+
+-------------------------------------------------------
+-- AIMBOT COM FOV (INALTERADO)
+-------------------------------------------------------
+local function getAlvo()
+\tlocal mousePos = UIS:GetMouseLocation()
+\tlocal menor = math.huge
+\tlocal alvo = nil
+
+\tfor _, plr in pairs(Players:GetPlayers()) do
+\t\tif plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+\t\t\tlocal headPos = plr.Character.Head.Position
+\t\t\tlocal screenPos, vis = Camera:WorldToViewportPoint(headPos)
+\t\t\tif vis then
+\t\t\t\tlocal dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+\t\t\t\tif dist < menor and dist < _G.FOV then
+\t\t\t\t\tmenor = dist
+\t\t\t\t\talvo = plr
+\t\t\t\tend
+\t\t\tend
+\t\tend
+\tend
+\treturn alvo
+end
+
+RunService.RenderStepped:Connect(function()
+\tif not _G.AimbotAtivo then return end
+\tlocal alvo = getAlvo()
+\tif alvo and alvo.Character and alvo.Character:FindFirstChild("Head") then
+\t\tCamera.CFrame = CFrame.new(Camera.CFrame.Position, alvo.Character.Head.Position)
+\tend
+end)
