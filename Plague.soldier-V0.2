@@ -1,0 +1,393 @@
+-- 🔥 HUB MIRA AUTOMÁTICA PRO v2.0 🔥
+-- 👑 Desenvolvido por: Plague.Soldier 👑
+-- Anti-Duplicação e Proteção
+if getgenv().AimbotFOVLoaded then return end
+getgenv().AimbotFOVLoaded = true
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local TweenService = game:GetService("TweenService")
+
+-- Configurações Principais
+local Config = {
+    MiraAutomatica = false,
+    VerificarTime = true,
+    VerificarParedes = true,
+    RaioMira = 100,
+    DestaqueInimigos = false,
+    VerificarTimeDestaque = true,
+    CorDestaque = Color3.fromRGB(255, 0, 0),
+    ArcoIrisMira = false,
+    CorMira = Color3.fromRGB(0, 255, 0),
+    Conexoes = {}
+}
+
+-- Interface Visual Principal
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PlagueSoldierHub_"..tick()
+ScreenGui.Parent = game.CoreGui
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+
+-- Círculo FOV Melhorado
+local MiraCircle = Instance.new("Frame")
+MiraCircle.Name = "MiraFOV_Plague"
+MiraCircle.Parent = ScreenGui
+MiraCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+MiraCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+MiraCircle.Size = UDim2.new(0, Config.RaioMira * 2, 0, Config.RaioMira * 2)
+MiraCircle.BackgroundTransparency = 1
+MiraCircle.Visible = false
+
+local StrokeMira = Instance.new("UIStroke", MiraCircle)
+StrokeMira.Thickness = 3
+StrokeMira.Color = Config.CorMira
+
+local CornerMira = Instance.new("UICorner", MiraCircle)
+CornerMira.CornerRadius = UDim.new(1, 0)
+
+-- Display FPS/Ping Otimizado
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Parent = ScreenGui
+InfoLabel.Size = UDim2.new(0, 240, 0, 45)
+InfoLabel.Position = UDim2.new(1, -250, 0, 15)
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.TextColor3 = Color3.new(1, 1, 1)
+InfoLabel.TextStrokeTransparency = 0
+InfoLabel.Font = Enum.Font.GothamBold
+InfoLabel.TextSize = 16
+InfoLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+local ultimoUpdate = tick()
+Config.Conexoes.FPS = RunService.Heartbeat:Connect(function()
+    local fps = math.floor(1 / (tick() - ultimoUpdate))
+    if tick() - ultimoUpdate >= 0.5 then
+        local stats = game:GetService("Stats")
+        local ping = tonumber(stats.Network.ServerStatsItem["Data Ping"]:GetValueString():match("%d+")) or 0
+        InfoLabel.Text = string.format("⚡ FPS: %d | 🌐 Ping: %dms | 👑 Plague.Soldier", fps, ping)
+        ultimoUpdate = tick()
+    end
+end)
+
+-- Interface Rayfield (Tudo em Português + Créditos)
+local Janela = Rayfield:CreateWindow({
+    Name = "🔥 Plague.Soldier Hub Pro 🔥",
+    LoadingTitle = "👑 Carregando Hub Premium...",
+    LoadingSubtitle = "Desenvolvido por Plague.Soldier",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "PlagueSoldierHub",
+        FileName = "config_pro"
+    },
+    KeySystem = false
+})
+
+-- Aba Principal - Mira Automática
+local AbaMira = Janela:CreateTab("🎯 Mira Automática", 4483362458)
+
+AbaMira:CreateToggle({
+    Name = "🔫 Ativar Mira Automática",
+    CurrentValue = false,
+    Callback = function(ativo)
+        Config.MiraAutomatica = ativo
+        MiraCircle.Visible = ativo
+        Rayfield:Notify({
+            Title = "🎯 Mira Automática",
+            Content = ativo and "✅ ATIVADA! Aponta automaticamente nos inimigos dentro do círculo FOV" or "❌ DESATIVADA",
+            Duration = 4,
+            Image = 4483362458
+        })
+    end
+})
+
+AbaMira:CreateToggle({
+    Name = "🛡️ Ignorar Companheiros de Time",
+    CurrentValue = true,
+    Callback = function(ativo)
+        Config.VerificarTime = ativo
+    end
+})
+
+AbaMira:CreateToggle({
+    Name = "👁️ Só Mira em Inimigos Visíveis",
+    CurrentValue = true,
+    Callback = function(ativo)
+        Config.VerificarParedes = ativo
+    end
+})
+
+AbaMira:CreateSlider({
+    Name = "📏 Raio da Mira (FOV)",
+    Range = {50, 400},
+    Increment = 10,
+    CurrentValue = 100,
+    Callback = function(valor)
+        Config.RaioMira = valor
+        MiraCircle:TweenSize(UDim2.new(0, valor * 2, 0, valor * 2), "Out", "Quad", 0.3)
+    end
+})
+
+-- Aba Destaque - ESP Aprimorado
+local AbaDestaque = Janela:CreateTab("👁️ Destaque Inimigos", 4483362458)
+
+AbaDestaque:CreateToggle({
+    Name = "✨ Ativar Destaque Visual Premium",
+    CurrentValue = false,
+    Callback = function(ativo)
+        Config.DestaqueInimigos = ativo
+        AtualizarTodosDestaques()
+        Rayfield:Notify({
+            Title = "👁️ Destaque Premium",
+            Content = ativo and "✅ Inimigos destacados com nome + distância!" or "❌ Destaques removidos",
+            Duration = 4,
+            Image = 4483362458
+        })
+    end
+})
+
+AbaDestaque:CreateToggle({
+    Name = "🛡️ Ignorar Time no Destaque",
+    CurrentValue = true,
+    Callback = function(ativo)
+        Config.VerificarTimeDestaque = ativo
+        AtualizarTodosDestaques()
+    end
+})
+
+AbaDestaque:CreateColorPicker({
+    Name = "🎨 Cor do Destaque Premium",
+    Color = Config.CorDestaque,
+    Callback = function(cor)
+        Config.CorDestaque = cor
+        AplicarCorDestaques(cor)
+    end
+})
+
+-- Aba Visual
+local AbaVisual = Janela:CreateTab("🎨 Visual Premium", 4483362458)
+
+AbaVisual:CreateToggle({
+    Name = "🌈 Mira Arco-Íris Animada",
+    CurrentValue = false,
+    Callback = function(ativo)
+        Config.ArcoIrisMira = ativo
+    end
+})
+
+AbaVisual:CreateColorPicker({
+    Name = "🎨 Cor da Mira FOV",
+    Color = Config.CorMira,
+    Callback = function(cor)
+        Config.CorMira = cor
+        if not Config.ArcoIrisMira then
+            StrokeMira.Color = cor
+        end
+    end
+})
+
+-- Sistema de Destaque ESP Melhorado (Plague.Soldier Edition)
+local Destaques = {}
+
+local function CriarDestaque(jogador)
+    if jogador == LocalPlayer or not jogador.Character then return end
+    
+    local char = jogador.Character
+    local humanoidRoot = char:FindFirstChild("HumanoidRootPart")
+    if not humanoidRoot then return end
+    
+    -- Remove destaque antigo
+    local antigo = char:FindFirstChild("PlagueHighlight")
+    if antigo then antigo:Destroy() end
+    
+    local destaque = Instance.new("Highlight")
+    destaque.Name = "PlagueHighlight"
+    destaque.FillTransparency = 0.3
+    destaque.OutlineTransparency = 0
+    destaque.OutlineColor = Config.CorDestaque
+    destaque.FillColor = Config.CorDestaque
+    destaque.Parent = char
+    
+    Destaques[jogador] = destaque
+    
+    -- Nome flutuante PREMIUM
+    local nomeGui = Instance.new("BillboardGui")
+    nomeGui.Name = "PlagueNome"
+    nomeGui.Size = UDim2.new(0, 220, 0, 60)
+    nomeGui.StudsOffset = Vector3.new(0, 4, 0)
+    nomeGui.Parent = humanoidRoot
+    nomeGui.Adornee = humanoidRoot
+    
+    local fundo = Instance.new("Frame")
+    fundo.Size = UDim2.new(1, -10, 1, -10)
+    fundo.Position = UDim2.new(0, 5, 0, 5)
+    fundo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    fundo.BackgroundTransparency = 0.4
+    fundo.Parent = nomeGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = fundo
+    
+    local nomeLabel = Instance.new("TextLabel")
+    nomeLabel.Size = UDim2.new(1, 0, 0.6, 0)
+    nomeLabel.Position = UDim2.new(0, 0, 0, 0)
+    nomeLabel.BackgroundTransparency = 1
+    nomeLabel.Text = jogador.DisplayName
+    nomeLabel.TextColor3 = Color3.new(1, 1, 1)
+    nomeLabel.TextStrokeTransparency = 0
+    nomeLabel.Font = Enum.Font.GothamBold
+    nomeLabel.TextSize = 16
+    nomeLabel.Parent = nomeGui
+    
+    local distLabel = Instance.new("TextLabel")
+    distLabel.Size = UDim2.new(1, 0, 0.4, 0)
+    distLabel.Position = UDim2.new(0, 0, 0.6, 0)
+    distLabel.BackgroundTransparency = 1
+    distLabel.Text = "Carregando..."
+    distLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    distLabel.TextStrokeTransparency = 0
+    distLabel.Font = Enum.Font.Gotham
+    distLabel.TextSize = 14
+    distLabel.Parent = nomeGui
+end
+
+function AtualizarTodosDestaques()
+    for jogador, destaque in pairs(Destaques) do
+        if jogador.Character and destaque.Parent then
+            local humanoidRoot = jogador.Character:FindFirstChild("HumanoidRootPart")
+            local nomeGui = humanoidRoot and humanoidRoot:FindFirstChild("PlagueNome")
+            local deveMostrar = Config.DestaqueInimigos and 
+                              (not Config.VerificarTimeDestaque or jogador.Team ~= LocalPlayer.Team)
+            
+            destaque.Enabled = deveMostrar
+            if nomeGui then
+                local distLabel = nomeGui:FindFirstChildOfClass("TextLabel", true)
+                if distLabel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local distancia = (jogador.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                    distLabel.Text = string.format("[%.1fm]", distancia)
+                end
+                nomeGui.Enabled = deveMostrar
+            end
+        else
+            Destaques[jogador] = nil
+        end
+    end
+end
+
+function AplicarCorDestaques(cor)
+    for _, destaque in pairs(Destaques) do
+        if destaque and destaque.Parent then
+            destaque.OutlineColor = cor
+            destaque.FillColor = cor
+        end
+    end
+end
+
+-- Configurar destaques para todos
+local function ConfigurarDestaque(jogador)
+    if jogador ~= LocalPlayer then
+        jogador.CharacterAdded:Connect(function()
+            task.wait(0.5)
+            CriarDestaque(jogador)
+        end)
+        if jogador.Character then
+            CriarDestaque(jogador)
+        end
+    end
+end
+
+for _, jogador in ipairs(Players:GetPlayers()) do
+    ConfigurarDestaque(jogador)
+end
+
+Players.PlayerAdded:Connect(ConfigurarDestaque)
+
+-- Loop de atualização de distância
+Config.Conexoes.Distancia = RunService.Heartbeat:Connect(AtualizarTodosDestaques)
+
+-- Função Principal de Mira (Otimizada Plague.Soldier)
+local function EncontrarInimigoProximo()
+    local maisProximo = nil
+    local menorDistancia = Config.RaioMira
+
+    for _, jogador in ipairs(Players:GetPlayers()) do
+        if jogador ~= LocalPlayer and jogador.Character and 
+           jogador.Character:FindFirstChild("HumanoidRootPart") and 
+           jogador.Character:FindFirstChild("Humanoid") and 
+           jogador.Character.Humanoid.Health > 0 then
+            
+            if Config.VerificarTime and jogador.Team == LocalPlayer.Team then 
+                continue 
+            end
+
+            local posicao, visivel = Camera:WorldToViewportPoint(jogador.Character.HumanoidRootPart.Position)
+            if visivel then
+                local centroTela = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+                local distancia = (Vector2.new(posicao.X, posicao.Y) - centroTela).Magnitude
+
+                if distancia <= menorDistancia then
+                    if Config.VerificarParedes then
+                        local origem = Camera.CFrame.Position
+                        local direcao = (jogador.Character.HumanoidRootPart.Position - origem).Unit * 2000
+                        local params = RaycastParams.new()
+                        params.FilterDescendantsInstances = {LocalPlayer.Character}
+                        params.FilterType = Enum.RaycastFilterType.Blacklist
+
+                        local resultado = workspace:Raycast(origem, direcao, params)
+                        if resultado and resultado.Instance:IsDescendantOf(jogador.Character) then
+                            maisProximo = jogador
+                            menorDistancia = distancia
+                        end
+                    else
+                        maisProximo = jogador
+                        menorDistancia = distancia
+                    end
+                end
+            end
+        end
+    end
+    return maisProximo
+end
+
+-- Loop Principal Otimizado
+Config.Conexoes.Principal = RunService.RenderStepped:Connect(function()
+    -- Efeito arco-íris suave
+    if Config.ArcoIrisMira then
+        local hue = (tick() * 0.3) % 1
+        StrokeMira.Color = Color3.fromHSV(hue, 1, 1)
+    end
+
+    -- Mira automática PREMIUM
+    if Config.MiraAutomatica then
+        local alvo = EncontrarInimigoProximo()
+        if alvo and alvo.Character and alvo.Character:FindFirstChild("HumanoidRootPart") then
+            local posAlvo = alvo.Character.HumanoidRootPart.Position + Vector3.new(0, 1.5, 0)
+            local novoCFrame = CFrame.lookAt(Camera.CFrame.Position, posAlvo)
+            Camera.CFrame = Camera.CFrame:Lerp(novoCFrame, 0.4)
+        end
+    end
+end)
+
+-- Limpeza automática
+LocalPlayer.AncestryChanged:Connect(function()
+    if not LocalPlayer.Parent then
+        for _, conexao in pairs(Config.Conexoes) do
+            if conexao then conexao:Disconnect() end
+        end
+        ScreenGui:Destroy()
+    end
+end)
+
+-- Notificação Final com Créditos
+Rayfield:Notify({
+    Title = "👑 Plague.Soldier Hub Carregado! 👑",
+    Content = "✅ Mira Automática Pro v2.0 ativa!
+🎮 Desenvolvido por Plague.Soldier",
+    Duration = 6,
+    Image = 4483362458
+})
+
+print("🔥 Plague.Soldier Hub carregado com sucesso! 🔥")
